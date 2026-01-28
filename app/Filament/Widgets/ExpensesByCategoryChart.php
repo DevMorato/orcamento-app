@@ -9,13 +9,12 @@ use Illuminate\Support\Facades\DB;
 
 class ExpensesByCategoryChart extends ChartWidget
 {
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 8;
     public function getHeading(): ?string
     {
         return 'Despesas por Categoria (Mês)';
     }
 
-    #[\Livewire\Attributes\Url]
     public ?string $scope = 'user';
 
     public function mount(): void
@@ -26,10 +25,15 @@ class ExpensesByCategoryChart extends ChartWidget
 
     protected function getData(): array
     {
-        $scope = $this->scope;
+        $scope = request()->query('scope') ?: session('dashboard_scope', 'user');
         $user = Auth::user();
-        $monthStart = now()->startOfMonth();
-        $monthEnd = now()->endOfMonth();
+
+        // Obter mês/ano do filtro
+        $filterMonth = (int) (request()->query('month') ?: session('dashboard_month', now()->month));
+        $filterYear = (int) (request()->query('year') ?: session('dashboard_year', now()->year));
+
+        $monthStart = \Carbon\Carbon::create($filterYear, $filterMonth, 1)->startOfMonth();
+        $monthEnd = \Carbon\Carbon::create($filterYear, $filterMonth, 1)->endOfMonth();
 
         $query = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')

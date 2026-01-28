@@ -8,8 +8,25 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateTransaction extends CreateRecord
 {
     protected static string $resource = TransactionResource::class;
+
+    protected static ?string $title = 'Nova Transação';
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Definir o tipo baseado no parâmetro da URL
+        $type = request()->query('type', 'expense');
+        $this->form->fill([
+            'type' => $type,
+            'date' => now(),
+        ]);
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        \Log::info('CreateTransaction data:', $data);
+
         $data['family_id'] = auth()->user()->family_id;
         $data['user_id'] = auth()->id();
 
@@ -26,5 +43,10 @@ class CreateTransaction extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

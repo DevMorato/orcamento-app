@@ -7,10 +7,12 @@ use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class StatsOverview extends BaseWidget
 {
-    #[\Livewire\Attributes\Url]
+    protected static ?int $sort = 4;
+
     public ?string $scope = 'user';
 
     public function mount(): void
@@ -23,8 +25,13 @@ class StatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        $scope = $this->scope;
+        // Usar request como fonte primária, session como fallback
+        $scope = request()->query('scope') ?: session('dashboard_scope', 'user');
         $user = Auth::user();
+
+        // Obter mês/ano do filtro
+        $filterMonth = (int) (request()->query('month') ?: session('dashboard_month', now()->month));
+        $filterYear = (int) (request()->query('year') ?: session('dashboard_year', now()->year));
 
         // Query Base
         $transactionQuery = Transaction::query();
@@ -39,8 +46,11 @@ class StatsOverview extends BaseWidget
         }
 
         // Filters for Month
-        $monthStart = now()->startOfMonth();
-        $monthEnd = now()->endOfMonth();
+        $monthStart = Carbon::create($filterYear, $filterMonth, 1)->startOfMonth();
+        $monthEnd = Carbon::create($filterYear, $filterMonth, 1)->endOfMonth();
+
+        // Nome do mês
+        $monthName = $monthStart->locale('pt_BR')->monthName;
 
         // Income (Receitas)
         $income = (clone $transactionQuery)
@@ -65,22 +75,57 @@ class StatsOverview extends BaseWidget
 
         $savings = $income - $expenses;
 
+        // Comparativo com mês anterior
+        $prevMonthStart = $monthStart->copy()->subMonth()->startOfMonth();
+        $prevMonthEnd = $monthStart->copy()->subMonth()->endOfMonth();
+
+        $prevIncome = (clone $transactionQuery)
+            ->where('type', 'income')
+            ->whereBetween('date', [$prevMonthStart, $prevMonthEnd])
+            ->sum('amount');
+
+        if ($scope === 'family') {
+            $prevExpenses = Transaction::query()
+                ->where('family_id', $user->family_id)
+                ->where('type', 'expense')
+                ->whereBetween('date', [$prevMonthStart, $prevMonthEnd])
+                ->sum('amount');
+        } else {
+            $prevExpenses = $user->transactionSplits()
+                ->whereHas('transaction', function ($q) use ($prevMonthStart, $prevMonthEnd) {
+                    $q->whereBetween('date', [$prevMonthStart, $prevMonthEnd]);
+                })
+                ->sum('amount');
+        }
+
+        // Cálculo de variação
+        $incomeChange = $prevIncome > 0 ? (($income - $prevIncome) / $prevIncome) * 100 : 0;
+        $expensesChange = $prevExpenses > 0 ? (($expenses - $prevExpenses) / $prevExpenses) * 100 : 0;
+
         return [
             Stat::make('Saldo Atual', 'R$ ' . number_format($balance, 2, ',', '.'))
                 ->description('Saldo acumulado')
                 ->color($balance >= 0 ? 'success' : 'danger'),
 
-            Stat::make('Receitas (Mês)', 'R$ ' . number_format($income, 2, ',', '.'))
-                ->description('Entradas em ' . now()->locale('pt_BR')->monthName)
+            Stat::make('Receitas', 'R$ ' . number_format($income, 2, ',', '.'))
+                ->description($this->formatChange($incomeChange) . ' vs mês anterior')
+                ->descriptionIcon($incomeChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
                 ->color('success'),
 
-            Stat::make('Despesas (Mês)', 'R$ ' . number_format($expenses, 2, ',', '.'))
-                ->description('Saídas em ' . now()->locale('pt_BR')->monthName)
+            Stat::make('Despesas', 'R$ ' . number_format($expenses, 2, ',', '.'))
+                ->description($this->formatChange($expensesChange) . ' vs mês anterior')
+                ->descriptionIcon($expensesChange <= 0 ? 'heroicon-m-arrow-trending-down' : 'heroicon-m-arrow-trending-up')
                 ->color('danger'),
 
-            Stat::make('Economia (Mês)', 'R$ ' . number_format($savings, 2, ',', '.'))
-                ->description('Rec. - Desp.')
+            Stat::make('Economia', 'R$ ' . number_format($savings, 2, ',', '.'))
+                ->description('Rec. - Desp. em ' . $monthName)
                 ->color($savings >= 0 ? 'success' : 'danger'),
         ];
+    }
+
+    private function formatChange(float $change): string
+    {
+        $sign = $change >= 0 ? '+' : '';
+        return $sign . number_format($change, 1, ',', '.') . '%';
     }
 }

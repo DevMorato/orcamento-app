@@ -10,6 +10,8 @@ class EditTransaction extends EditRecord
 {
     protected static string $resource = TransactionResource::class;
 
+    protected static ?string $title = 'Editar Transação';
+
     protected function getHeaderActions(): array
     {
         return [

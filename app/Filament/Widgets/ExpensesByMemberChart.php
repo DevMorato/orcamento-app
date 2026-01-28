@@ -9,10 +9,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ExpensesByMemberChart extends ChartWidget
 {
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 6;
     protected int|string|array $columnSpan = 'full';
 
-    #[\Livewire\Attributes\Url]
     public ?string $scope = 'user';
 
     public function getHeading(): ?string
@@ -28,10 +27,15 @@ class ExpensesByMemberChart extends ChartWidget
 
     protected function getData(): array
     {
-        $scope = $this->scope;
+        $scope = request()->query('scope') ?: session('dashboard_scope', 'user');
         $user = Auth::user();
-        $monthStart = now()->startOfMonth();
-        $monthEnd = now()->endOfMonth();
+
+        // Obter mês/ano do filtro
+        $filterMonth = (int) (request()->query('month') ?: session('dashboard_month', now()->month));
+        $filterYear = (int) (request()->query('year') ?: session('dashboard_year', now()->year));
+
+        $monthStart = \Carbon\Carbon::create($filterYear, $filterMonth, 1)->startOfMonth();
+        $monthEnd = \Carbon\Carbon::create($filterYear, $filterMonth, 1)->endOfMonth();
 
         $query = TransactionSplit::query()
             ->join('transactions', 'transaction_splits.transaction_id', '=', 'transactions.id')

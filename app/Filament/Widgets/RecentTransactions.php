@@ -12,14 +12,13 @@ use Illuminate\Support\Facades\Auth;
 
 class RecentTransactions extends BaseWidget
 {
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 9;
     protected int|string|array $columnSpan = 'full';
     public function getHeading(): ?string
     {
         return 'Transações Recentes';
     }
 
-    #[\Livewire\Attributes\Url]
     public ?string $scope = 'user';
 
     public function mount(): void
@@ -34,7 +33,7 @@ class RecentTransactions extends BaseWidget
     {
         return $table
             ->query(function () {
-                $scope = $this->scope;
+                $scope = request()->query('scope') ?: session('dashboard_scope', 'user');
                 $user = Auth::user();
 
                 $query = Transaction::query();

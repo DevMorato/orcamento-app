@@ -14,6 +14,8 @@ class Transaction extends Model
     protected $fillable = [
         'family_id',
         'user_id',
+        'account_id',
+        'recurring_transaction_id',
         'type',
         'amount',
         'date',
@@ -55,5 +57,15 @@ class Transaction extends Model
     public function splits(): HasMany
     {
         return $this->hasMany(TransactionSplit::class);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    public function recurringTransaction(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTransaction::class);
     }
 }

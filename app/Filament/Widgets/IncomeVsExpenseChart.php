@@ -14,10 +14,9 @@ class IncomeVsExpenseChart extends ChartWidget
     {
         return 'Receitas vs Despesas (Últimos 12 meses)';
     }
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 7;
     protected int|string|array $columnSpan = 'full';
 
-    #[\Livewire\Attributes\Url]
     public ?string $scope = 'user';
 
     public function mount(): void
@@ -28,7 +27,7 @@ class IncomeVsExpenseChart extends ChartWidget
 
     protected function getData(): array
     {
-        $scope = $this->scope;
+        $scope = request()->query('scope') ?: session('dashboard_scope', 'user');
         $user = Auth::user();
 
         $start = now()->subYear()->startOfMonth();

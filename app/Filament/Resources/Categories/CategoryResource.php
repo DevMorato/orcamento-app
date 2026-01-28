@@ -23,7 +23,7 @@ class CategoryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Categorias';
 
-    // Removi a linha $navigationGroup temporariamente
+    protected static string|\UnitEnum|null $navigationGroup = 'Configurações';
 
     public static function form(Schema $schema): Schema
     {
