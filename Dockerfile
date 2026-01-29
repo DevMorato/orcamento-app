@@ -92,9 +92,17 @@ RUN mkdir -p \
     bootstrap/cache \
     database \
     /var/log/supervisor \
-    /var/log/nginx && \
-    chown -R www:www storage bootstrap/cache database && \
-    chmod -R 775 storage bootstrap/cache database
+    /var/log/nginx \
+    /var/run \
+    /var/lib/nginx/tmp/client_body \
+    /var/lib/nginx/tmp/proxy \
+    /var/lib/nginx/tmp/fastcgi \
+    /var/lib/nginx/tmp/uwsgi \
+    /var/lib/nginx/tmp/scgi \
+    /var/lib/nginx/logs && \
+    chown -R www:www storage bootstrap/cache database /var/log/supervisor /var/log/nginx /var/run /var/lib/nginx && \
+    chmod -R 775 storage bootstrap/cache database && \
+    chmod -R 755 /var/log/supervisor /var/log/nginx /var/lib/nginx
 
 # Configurar Nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -116,6 +124,13 @@ COPY docker/supervisord.conf /etc/supervisord.conf
 # Copiar script de entrada
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Trocar para usuário não-privilegiado
+USER www
+
+# Healthcheck para monitoramento de saúde do container
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
 
 # Expor porta
 EXPOSE 80

@@ -53,11 +53,6 @@ if [ ! -L "/var/www/html/public/storage" ]; then
     php artisan storage:link
 fi
 
-# Garantir permissões corretas
-echo "🔐 Ajustando permissões..."
-chown -R www:www /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
 echo "✅ Aplicação pronta!"
 
 # Executar comando passado como argumento
