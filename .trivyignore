@@ -1,0 +1,2 @@
+vendor/laravel/sail/*
+vendor/spatie/shiki-php/package-lock.json
